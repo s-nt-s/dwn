@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Descarga múltiple desde GET</title>
+  <script>
+    // Diccionario mínimo de extensiones -> MIME
+    const mimeTypes = {
+      "txt": "text/plain",
+      "html": "text/html",
+      "htm": "text/html",
+      "json": "application/json",
+      "csv": "text/csv",
+      "jpg": "image/jpeg",
+      "jpeg": "image/jpeg",
+      "png": "image/png",
+      "gif": "image/gif",
+      "pdf": "application/pdf"
+    };
+
+    function getMimeType(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      return mimeTypes[ext] || "application/octet-stream";
+    }
+
+    function base64ToBlob(base64, mimeType) {
+      const byteChars = atob(base64);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteNumbers[i] = byteChars.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mimeType });
+    }
+
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+
+      if ([...params.keys()].length === 0) {
+        document.body.innerHTML = "<p style='color:red'>Faltan parámetros: usa ?archivo1.txt=BASE64&archivo2.json=BASE64...</p>";
+        return;
+      }
+
+      let delay = 0;
+
+      for (const [filename, base64Data] of params.entries()) {
+        try {
+          const mimeType = getMimeType(filename);
+          const blob = base64ToBlob(base64Data, mimeType);
+          const url = URL.createObjectURL(blob);
+
+          // Crear enlace oculto y descargar con un pequeño delay
+          setTimeout(() => {
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+              URL.revokeObjectURL(url);
+              a.remove();
+            }, 1000);
+          }, delay);
+
+          delay += 500; // Espaciamos un poco cada descarga
+        } catch (e) {
+          const p = document.createElement("p");
+          p.style.color = "red";
+          p.textContent = `Error al procesar ${filename}`;
+          document.body.appendChild(p);
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+  <p>Preparando descargas...</p>
+</body>
+</html>
